@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	uaa "github.com/pivotalservices/go-uaac"
+	"github.com/stretchr/testify/assert"
 )
 
 func getUaac(apiUrl string) (uaa.Client, error) {
@@ -150,4 +151,91 @@ func TestDeleteIdentityZoneCommand(t *testing.T) {
 	if err := command.Execute(); err != nil {
 		t.Errorf("Failed to delete IdentityZone: %v", err)
 	}
+}
+
+func TestCreateIdentityZoneCommand(t *testing.T) {
+	//NewCreateIdentityZoneCommand
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{
+		  "id" : "twiglet-create",
+		  "subdomain" : "twiglet",
+          "description" : "The Twiglet Zone",
+		  "config" : {
+		    "tokenPolicy" : {
+		      "accessTokenValidity" : -1,
+		      "refreshTokenValidity" : -1,
+		      "jwtRevocable" : false,
+		      "activeKeyId" : null,
+		      "keys" : { }
+		    },
+		    "samlConfig" : {
+		      "assertionSigned" : true,
+		      "requestSigned" : true,
+		      "wantAssertionSigned" : false,
+		      "wantAuthnRequestSigned" : false,
+		      "assertionTimeToLiveSeconds" : 600,
+		      "certificate" : null,
+		      "privateKey" : null,
+		      "privateKeyPassword" : null
+		    },
+		    "links" : {
+		      "logout" : {
+		        "redirectUrl" : "/login",
+		        "redirectParameterName" : "redirect",
+		        "disableRedirectParameter" : true,
+		        "whitelist" : null
+		      },
+		      "selfService" : {
+		        "selfServiceLinksEnabled" : true,
+		        "signup" : "/create_account",
+		        "passwd" : "/forgot_password"
+		      }
+		    },
+		    "prompts" : [ {
+		      "name" : "username",
+		      "type" : "text",
+		      "text" : "Email"
+		    }, {
+		      "name" : "password",
+		      "type" : "password",
+		      "text" : "Password"
+		    }, {
+		      "name" : "passcode",
+		      "type" : "password",
+		      "text" : "One Time Code (Get on at /passcode)"
+		    } ],
+		    "idpDiscoveryEnabled" : false
+		  },
+		  "name" : "The Twiglet Zone",
+		  "version" : 0,
+		  "created" : 1468364452298,
+		  "last_modified" : 1468364452298
+		}`)
+	}))
+	defer ts.Close()
+
+	uaac, err := getUaac(ts.URL)
+	if err != nil {
+		t.Errorf("Failed to get uaa client; %v", err)
+		return
+	}
+
+	//var zone IdentityZone
+	zone := IdentityZone{
+		// ID is optional will be set on response if empty
+		Subdomain:   "twiglet in",
+		Name:        "The Twiglet Zone in",
+		Version:     1,
+		Description: "The Twiglet Zone in",
+	}
+
+	command := NewCreateIdentityZoneCommand(uaac, &zone)
+
+	if err := command.Execute(); err != nil {
+		t.Errorf("Failed to create IdentityZone: %v", err)
+	}
+
+	assert.Equal(t, "twiglet-create", zone.ID)
+	assert.Equal(t, "The Twiglet Zone", zone.Name)
+	assert.Equal(t, "The Twiglet Zone", zone.Description)
 }

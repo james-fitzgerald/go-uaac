@@ -22,6 +22,13 @@ type deleteIdentityZoneCommand struct {
 	zone *IdentityZone
 }
 
+type createIdentityZoneCommand struct {
+	uaac uaa.Client
+	zone *IdentityZone
+}
+
+// todo: updateIdentityZoneCommand
+
 func NewListIdentityZonesCommand(uaac uaa.Client, zones *[]*IdentityZone) uaa.Command {
 	return &listIdentityZonesCommand{
 		uaac:  uaac,
@@ -39,6 +46,13 @@ func NewGetIdentityZoneByIDCommand(uaac uaa.Client, zoneID string, zone *Identit
 
 func NewDeleteIdentityZoneCommand(uaac uaa.Client, zone *IdentityZone) uaa.Command {
 	return &deleteIdentityZoneCommand{
+		uaac: uaac,
+		zone: zone,
+	}
+}
+
+func NewCreateIdentityZoneCommand(uaac uaa.Client, zone *IdentityZone) uaa.Command {
+	return &createIdentityZoneCommand{
 		uaac: uaac,
 		zone: zone,
 	}
@@ -67,6 +81,16 @@ func (c *deleteIdentityZoneCommand) Execute() error {
 	resp, err := c.uaac.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("Failed to Delete identity zone with id %s. HTTP Response Code: %d; error: %v", c.zone.ID, resp.StatusCode, err)
+	}
+
+	return nil
+}
+
+func (c *createIdentityZoneCommand) Execute() error {
+	req := c.uaac.NewRequest("POST", "/identity-zones")
+	req.SetPayload(c.zone)
+	if err := c.uaac.ExecuteAndUnmarshall(req, &c.zone); err != nil {
+		return err
 	}
 
 	return nil
